@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Değerlendirme</title>
+    <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+        background-color: #f0f2f5;
+        color: #333;
+        line-height: 1.6;
+        padding: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    h1 {
+        color: #2c3e50;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        font-size: 2.2rem;
+    }
+
+    #userPrompt {
+        width: 100%;
+        padding: 1rem;
+        margin: 1rem 0;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 1rem;
+        resize: vertical;
+        transition: border-color 0.3s ease;
+    }
+
+    #userPrompt:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52,152,219,0.1);
+    }
+
+    button {
+        background-color: #3498db;
+        color: white;
+        padding: 0.8rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        display: block;
+        width: 100%;
+        max-width: 200px;
+        margin: 1rem auto;
+    }
+
+    button:hover {
+        background-color: #2980b9;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    }
+
+    #result {
+        background-color: #fff;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-top: 1.5rem;
+        border-left: 4px solid #3498db;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        font-family: 'Courier New', Courier, monospace;
+    }
+
+    #result p {
+        margin: 0.8rem 0;
+        line-height: 1.8;
+    }
+
+    #result strong {
+        color: #2c3e50;
+        font-weight: 600;
+    }
+
+    .loading::after {
+        content: "";
+        animation: loading 1s infinite;
+    }
+
+    @keyframes loading {
+        0% { content: ""; }
+        25% { content: "."; }
+        50% { content: ".."; }
+        75% { content: "..."; }
+    }
+
+    @media (max-width: 768px) {
+        body { padding: 10px; }
+        h1 { font-size: 1.8rem; }
+        #userPrompt { font-size: 0.9rem; }
+        button { max-width: 100%; }
+    }
+    </style>
+</head>
+<body>
+    <h1>AI Prompt Değerlendirme</h1>
+    <p><strong>Verilen Konu:</strong> <span id="topic">Yükleniyor...</span></p>
+    <textarea id="userPrompt" placeholder="Verilen konu hakkında en iyi promptu yazın..." rows="4"></textarea>
+    <button onclick="evaluatePrompt()">Gönder</button>
+    <h2>Değerlendirme Sonucu:</h2>
+    <div id="result">Henüz değerlendirme yok.</div>
+    
+    <script>
+        let currentTopic = "";
+
+        async function getNewTopic() {
+            try {
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": "Bearer <APİ>",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        "model": "google/gemini-2.5-pro-exp-03-25:free",
+                        "messages": [
+                            { 
+                                "role": "user", 
+                                "content": `Kullanıcılara yapay zeka için prompt yazdıracak konu önerileri oluştur. Format:
+    
+                                 "Yapay zekaya [ANA KONSEPT] [HEDEF ODAK] yaptır"
+
+                                 Kurallar:
+                                 1. 🌟 Pratik Fayda: Günlük hayatta uygulanabilir olsun
+                                 2. 🎯 Net Çerçeve: 5-7 kelimeyi geçmesin
+                                 3. 💡 Yaratıcı Dokunuş: Sıradanlıktan kaçın ama karmaşık olmasın
+
+                                 Örnekler:
+                                 - "Yapay zekaya tarifleri görselleştirterek yemek videosu hazırlat"
+                                 - "Yapay zekaya sosyal medya gönderileri için hashtag analizi yaptır"
+                                 - "Yapay zekaya bütçe planına uygun alışveriş listesi oluşturt"
+                                 
+                                 Çıktı: sadece TEK BİR konu önerisi, başka bir şey istemiyorum.
+                                 `  
+                                 
+                            }
+                        ]
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP hatası! Durum: ${response.status}`);
+                
+                const data = await response.json();
+                if (!data?.choices?.[0]?.message?.content) throw new Error("Geçersiz API yanıtı");
+
+                currentTopic = data.choices[0].message.content;
+                document.getElementById("topic").textContent = currentTopic;
+            } catch (error) {
+                console.error("Konu alınamadı:", error);
+                document.getElementById("topic").textContent = `Hata: ${error.message}`;
+            }
+        }
+
+        async function evaluatePrompt() {
+            const userPrompt = document.getElementById("userPrompt").value.trim();
+            if (!userPrompt) return alert("Lütfen bir prompt yazın!");
+
+            const resultElement = document.getElementById("result");
+            resultElement.innerHTML = '<span class="loading">Değerlendiriliyor</span>';
+
+            try {
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Authorization": "Bearer <APİ>", 
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        "model": "google/gemini-2.5-pro-exp-03-25:free",
+                        "messages": [
+                            { 
+                                "role": "user", 
+                                
+                                "content": `Aşağıdaki promptu profesyonel prompt mühendisliği standartlarında analiz et: '${userPrompt}'
+
+                                Adımları takip et:
+                                1. [Optimizasyon] Promptu aynı amacı daha etkili şekilde karşılayacak şekilde yeniden yaz
+                                2. [Analiz] Aşağıdaki kriterlerde 10 üzerinden puanla (Ek olarak 2-3 tane konuya uygun yeni kriter ekle, gerekirse mevcut kriterleri değiştir veya birleştir. ):
+                                   - Netlik ve Anlaşılırlık
+                                   - Bağlamsal Derinlik
+                                   - Eylem Odaklılık
+                                   - Ölçülebilir Çıktı
+                                   - Yaratıcılık Potansiyeli
+                                3. [İyileştirme] Madde madde 5 teknik öneri sun
+                                4. [Örnek] Optimize edilmiş promptla oluşturulabilecek ideal çıktı örneği ver
+
+                                Çıktı Formatı:
+                                ✨ Optimize Prompt: [Buraya yeni prompt]
+
+                                📊 Değerlendirme:
+                                - Kriter 1: Puan/10 | Açıklama
+                                - Kriter 2: Puan/10 | Açıklama
+                                - ...
+
+                                💡 İyileştirme Önerileri:
+                                1. [Öneri 1]
+                                2. [Öneri 2]
+
+                                🏆 Örnek Çıktı: [AI'dan beklenen ideal yanıt]`
+                            }
+                        ]
+                    })
+                });
+
+                if (!response.ok) throw new Error(`HTTP hatası! Durum: ${response.status}`);
+                
+                const data = await response.json();
+                if (!data?.choices?.[0]?.message?.content) throw new Error("Geçersiz API yanıtı");
+
+                const resultText = data.choices[0].message.content;
+                resultElement.innerHTML = resultText
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\n/g, '<br>');
+                    
+            } catch (error) {
+                console.error("Değerlendirme hatası:", error);
+                resultElement.textContent = `Hata: ${error.message}`;
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', getNewTopic);
+    </script>
+</body>
+</html>

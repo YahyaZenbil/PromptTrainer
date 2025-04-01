@@ -1,4 +1,4 @@
-### AI Prompt Değerlendirme
+### PromptTrainer
 
 Bu proje, yapay zeka için en iyi promptları yazmayı teşvik eden bir web uygulamasıdır. Prompt yazma konusunda kendinizi geliştirebilirsiniz. Kullanıcılara rastgele bir konu verilir ve en iyi promptu oluşturmaları beklenir. Ardından, yazılan prompt profesyonel standartlara göre analiz edilir ve iyileştirme önerileri sunulur.
 
